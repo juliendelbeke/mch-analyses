@@ -16,6 +16,18 @@ CSCS via `earthkit.data.from_source("file", ...)` and process them with `earthki
 `eccodes`/`eckit`/`mir` native libraries these notebooks need. There is no build step, lint config, or
 test suite — the repo's only "product" is the notebooks themselves.
 
+## Why: the research question behind the notebooks
+
+These notebooks exist to investigate a "spin-up/spin-down" bias in ICON-CH1/KENDA-CH1 total cloud cover
+(CLCT) forecasts: error metrics shift for ~4-6h after each forecast initialization, with a seasonally-varying
+diurnal pattern, before settling. The investigation compares ICON/KENDA verification scores against NWCSAF
+satellite products and Payerne sounding-derived inversion strength, and includes dedicated assimilation
+e-suite experiments (e.g. excluding T_2M/RH_2M) to isolate the cause. The plots and comparison GIFs these
+notebooks produce feed a running findings write-up shared with the team — that write-up (not the notebooks
+themselves) is the actual deliverable. Detailed findings-to-date and the current working hypotheses
+extracted from it live in Claude's memory (project/reference entries), not here — ask to recall them
+rather than expecting this file to carry the full history.
+
 ## Environment setup (CSCS)
 
 ```bash

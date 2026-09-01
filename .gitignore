@@ -6,6 +6,8 @@ spack.lock
 *.swp
 config.yml
 .fdb_image
+*.csv
+*.png
 
 # Folders for local runs.
 tmp/

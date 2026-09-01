@@ -1,0 +1,124 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>ramanlidar_lff_frames</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; font: 13px/1.4 system-ui, sans-serif;
+          display: flex; flex-direction: column; height: 100vh; }
+  #bar { display: flex; gap: .6rem; align-items: center; padding: .5rem .8rem;
+          border-bottom: 1px solid #8886; flex: none; flex-wrap: wrap; }
+  #bar button { font: inherit; padding: .25rem .6rem; cursor: pointer; }
+  #slider { flex: 1 1 240px; min-width: 160px; }
+  #label, #cache { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  #cache { opacity: .7; }
+  #stage { flex: 1; overflow: auto; display: grid; place-items: center; }
+  /* fit to the window by default; the zoom button switches to pixel-for-pixel and back */
+  #stage img { max-width: 100%; max-height: 100%; }
+  #stage.zoom img { max-width: none; max-height: none; }
+  kbd { border: 1px solid #8886; border-radius: 3px; padding: 0 .25rem; }
+</style>
+</head>
+<body>
+<div id="bar">
+  <button id="prev" title="previous frame">&#9664;</button>
+  <button id="next" title="next frame">&#9654;</button>
+  <button id="play">play</button>
+  <input id="slider" type="range" min="0" max="75" value="0" step="1">
+  <span id="label"></span>
+  <label>fps <input id="fps" type="number" value="4" min="1" max="30" style="width:3.5em"></label>
+  <button id="zoom">actual size</button>
+  <span id="cache"></span>
+  <span style="opacity:.7"><kbd>&larr;</kbd><kbd>&rarr;</kbd> step &middot;
+    <kbd>space</kbd> play &middot; <kbd>home</kbd>/<kbd>end</kbd> ends</span>
+</div>
+<div id="stage"></div>
+<script>
+const FRAMES = ["ramanlidar_lff_2025100401.png", "ramanlidar_lff_2025100404.png", "ramanlidar_lff_2025100406.png", "ramanlidar_lff_2025100407.png", "ramanlidar_lff_2025100408.png", "ramanlidar_lff_2025100409.png", "ramanlidar_lff_2025100410.png", "ramanlidar_lff_2025100411.png", "ramanlidar_lff_2025100412.png", "ramanlidar_lff_2025100413.png", "ramanlidar_lff_2025100423.png", "ramanlidar_lff_2025100500.png", "ramanlidar_lff_2025100504.png", "ramanlidar_lff_2025100508.png", "ramanlidar_lff_2025100509.png", "ramanlidar_lff_2025100510.png", "ramanlidar_lff_2025100511.png", "ramanlidar_lff_2025100514.png", "ramanlidar_lff_2025100517.png", "ramanlidar_lff_2025100518.png", "ramanlidar_lff_2025100519.png", "ramanlidar_lff_2025100602.png", "ramanlidar_lff_2025100604.png", "ramanlidar_lff_2025100607.png", "ramanlidar_lff_2025100608.png", "ramanlidar_lff_2025100609.png", "ramanlidar_lff_2025100610.png", "ramanlidar_lff_2025100611.png", "ramanlidar_lff_2025100612.png", "ramanlidar_lff_2025100613.png", "ramanlidar_lff_2025100614.png", "ramanlidar_lff_2025100615.png", "ramanlidar_lff_2025100616.png", "ramanlidar_lff_2025100617.png", "ramanlidar_lff_2025100618.png", "ramanlidar_lff_2025100619.png", "ramanlidar_lff_2025100620.png", "ramanlidar_lff_2025100621.png", "ramanlidar_lff_2025100622.png", "ramanlidar_lff_2025100623.png", "ramanlidar_lff_2025100700.png", "ramanlidar_lff_2025100701.png", "ramanlidar_lff_2025100702.png", "ramanlidar_lff_2025100703.png", "ramanlidar_lff_2025100704.png", "ramanlidar_lff_2025100705.png", "ramanlidar_lff_2025100706.png", "ramanlidar_lff_2025100707.png", "ramanlidar_lff_2025100708.png", "ramanlidar_lff_2025100709.png", "ramanlidar_lff_2025100710.png", "ramanlidar_lff_2025100711.png", "ramanlidar_lff_2025100712.png", "ramanlidar_lff_2025100713.png", "ramanlidar_lff_2025100714.png", "ramanlidar_lff_2025100715.png", "ramanlidar_lff_2025100716.png", "ramanlidar_lff_2025100717.png", "ramanlidar_lff_2025100718.png", "ramanlidar_lff_2025100719.png", "ramanlidar_lff_2025100720.png", "ramanlidar_lff_2025100721.png", "ramanlidar_lff_2025100722.png", "ramanlidar_lff_2025100814.png", "ramanlidar_lff_2025100815.png", "ramanlidar_lff_2025100816.png", "ramanlidar_lff_2025100817.png", "ramanlidar_lff_2025100818.png", "ramanlidar_lff_2025100911.png", "ramanlidar_lff_2025100912.png", "ramanlidar_lff_2025100913.png", "ramanlidar_lff_2025100914.png", "ramanlidar_lff_2025100915.png", "ramanlidar_lff_2025100916.png", "ramanlidar_lff_2025100917.png", "ramanlidar_lff_2025101001.png"];
+const KEEP = 24;        // frames held decoded either side of the current one; 0 = all
+const stage = document.getElementById('stage'), slider = document.getElementById('slider');
+const label = document.getElementById('label'), play = document.getElementById('play');
+const cache = document.getElementById('cache');
+let i = 0, timer = null;
+
+// Swapping one <img>'s src re-decodes the PNG on every step: the bytes are cached but the
+// bitmap is not, and decoding a large frame is the slow part. So every frame gets its own
+// <img>, kept in the DOM and already decoded, and stepping only flips which one is visible -
+// a composite, no decode, no flash. A decoded frame costs width*height*4 bytes, so KEEP
+// bounds how many are held at once; raise it as far as memory allows, or set 0 to hold the
+// whole series.
+const slots = new Map();                        // index -> <img>, in the DOM and decoding
+
+function slot(n) {
+  let im = slots.get(n);
+  if (!im) {
+    im = new Image();
+    im.alt = FRAMES[n];
+    im.style.display = 'none';
+    im.src = FRAMES[n];
+    stage.appendChild(im);
+    slots.set(n, im);
+    // decode() resolves once the bitmap is ready, so a frame is never shown half-drawn
+    if (im.decode) im.decode().catch(() => {});
+  }
+  return im;
+}
+
+function prune() {
+  if (!KEEP) return;                            // holding everything: nothing to drop
+  for (const [n, im] of slots) {
+    let d = Math.abs(n - i);
+    d = Math.min(d, FRAMES.length - d);         // the series wraps, so the ends are adjacent
+    if (d > KEEP) { im.remove(); slots.delete(n); }
+  }
+}
+
+function show(n) {
+  const prev = slots.get(i);
+  i = (n + FRAMES.length) % FRAMES.length;
+  const im = slot(i);
+  if (prev && prev !== im) prev.style.display = 'none';
+  im.style.display = 'block';
+  slider.value = i;
+  label.textContent = `${i + 1} / ${FRAMES.length}  ${FRAMES[i]}`;
+  const reach = KEEP || FRAMES.length;
+  for (let d = 1; d <= reach; d++) {           // outwards, so the neighbours are ready first
+    slot((i + d) % FRAMES.length);
+    slot((i - d + FRAMES.length) % FRAMES.length);
+  }
+  prune();
+  cache.textContent = `${slots.size} cached`;
+}
+
+function stop() { clearInterval(timer); timer = null; play.textContent = 'play'; }
+function toggle() {
+  if (timer) return stop();
+  const fps = Math.max(1, +document.getElementById('fps').value || 4);
+  timer = setInterval(() => show(i + 1), 1000 / fps);
+  play.textContent = 'pause';
+}
+
+document.getElementById('prev').onclick = () => { stop(); show(i - 1); };
+document.getElementById('next').onclick = () => { stop(); show(i + 1); };
+play.onclick = toggle;
+slider.oninput = () => { stop(); show(+slider.value); };
+document.getElementById('zoom').onclick = e => {
+  // the class lives on the container, so it applies to every cached frame at once
+  stage.classList.toggle('zoom');
+  e.target.textContent = stage.classList.contains('zoom') ? 'fit to window' : 'actual size';
+};
+addEventListener('keydown', e => {
+  const k = e.key;
+  if (k === 'ArrowRight' || k === 'ArrowDown' || k === 'j') { stop(); show(i + 1); }
+  else if (k === 'ArrowLeft' || k === 'ArrowUp' || k === 'k') { stop(); show(i - 1); }
+  else if (k === ' ') toggle();
+  else if (k === 'Home') { stop(); show(0); }
+  else if (k === 'End') { stop(); show(FRAMES.length - 1); }
+  else return;
+  e.preventDefault();                           // so the page does not scroll under the image
+});
+show(0);
+</script>
+</body>
+</html>
