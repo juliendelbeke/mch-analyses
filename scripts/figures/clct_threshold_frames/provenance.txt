@@ -1,0 +1,9 @@
+experiments 801, 802 (rows)
+period      2025-10-04 01:00:00 .. 2025-10-10 00:00:00 (144 hours)
+tau*        day 66% / night 77% -- fitted on 801 before 2025-10-07
+DWD tau     12.5% (1 okta)
+observation NWCSAF cma, slot T-15min,
+            ct screening + parallax (ctth_alti); amber = not observed
+columns     mask | CLCT>=tau* | CLCT>=12.5% | CLCT [%]
+bias panel  MOVERO CLCT ME [octa], ch, 801/802 FG-det
+notebook    CLCT_threshold_corrected.ipynb
