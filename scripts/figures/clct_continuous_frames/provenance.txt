@@ -1,0 +1,10 @@
+experiments 801, 802 (rows)
+period      2025-10-04 01:00:00 .. 2025-10-10 00:00:00 (144 hours)
+maps        both fields block-averaged 5x5 (~15 km),
+            same validity mask, no threshold anywhere
+columns     NWCSAF amount | ICON CLCT | difference
+observation NWCSAF cma, slot T-15min,
+            parallax-corrected, snow/ice screened
+panel 1     Swiss-mean CLCT - NWCSAF cloud amount [%], 3 km
+panel 2     MOVERO CLCT ME [octa], ch, FG-det
+notebook    CLCT_continuous_comparison.ipynb

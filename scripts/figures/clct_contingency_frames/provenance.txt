@@ -1,0 +1,12 @@
+experiments 801, 802
+period      2025-10-04 01:00:00 .. 2025-10-10 00:00:00 (144 hours)
+threshold   tau by retrieval condition, per pixel: {'day': 62.0, 'twilight': 74.5, 'night': 74.0}, fallback 68.0%
+            fitted on operational KENDA-CH1 det FG vs NWCSAF,
+            Sep 2024 - Sep 2026, 16795 scenes (CLCT_tau_conditions.ipynb)
+observation NWCSAF cma, slot T-15min,
+            parallax-corrected, snow/ice screened
+panels      row 1: NWCSAF mask | 801 mask | 802 mask
+            row 2: 801 contingency | 802 contingency
+            rows 3-4: satellite thresholded bias | MOVERO CLCT ME
+grid        native 3 km, no coarsening
+notebook    CLCT_contingency_frames.ipynb
